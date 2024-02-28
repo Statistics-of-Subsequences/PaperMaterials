@@ -17,5 +17,5 @@ The versions are:
 NOTE: the contents of eigen-3.4.0 are NOT written by us. This is the location of the Eigen 3 library (which has been imported directly into the repository, as recommended). Eigen 3 is licensed under MPL2. See Eigen 3 documentation [here](https://eigen.tuxfamily.org/index) and source code [here](https://gitlab.com/libeigen/eigen).
 
 
-We have not yet created a Makefile. To run, make sure you have a C++ compiler installed. Then, clone this repository, edit the USER PARAMETERS in each file as desired, navigate to this directory, and run `g++ -O3 -I -pthread ./eigen-3.4.0/ ./Binary-RAMOnly.cpp -o Binary-RAMOnly` and then run `./Binary-RAMOnly` (or `./Binary-RAMOnly.exe` on Windows). (Change the file name depending on which version you want to run).
+We have not yet created a Makefile. To run, make sure you have a C++ compiler installed. Then, clone this repository, edit the USER PARAMETERS in each file as desired, navigate to this directory, and run `g++ -O3 -pthread -I ./eigen-3.4.0/ ./Binary-RAMOnly.cpp -o Binary-RAMOnly` and then run `./Binary-RAMOnly` (or `./Binary-RAMOnly.exe` on Windows). (Change the file name depending on which version you want to run).
 **NOTE: The version that reads and writes from external memory works only on Linux systems.**
