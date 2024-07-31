@@ -31,10 +31,15 @@ using std::endl;
 /* Length of the strings. For this verion, do not set < 5.*/
 #define length 13
 
+/* Parameter is n, the maximum number of iterations to run for (= n). However, it may
+ * exit early if changes do not exceed a convergence tolerance.*/
+#define MAX_ITERS 200
+
 /* To write to/from external memory, we create a number of files for each vector. This parameter determines the size of
  * each individual file, in bytes.
- * - MUST be a divisor of TOTAL_VEC_SIZE. This means it must be a power of 2, and <= TOTAL_VEC_SIZE.
- * - Must be > TOTAL_VEC_SIZE/512 (i.e., TOTAL_VEC_SIZE/256 or larger). This is because most systems have a hard limit
+ * - MUST be a divisor of TOTAL_VEC_SIZE. This means it must be a power of 2, and ideally <= TOTAL_VEC_SIZE. (As a
+ * reminder: TOTAL_VEC_SIZE is 2^(2*length -1), so it is convenient to define file size relative to a Gibibyte).
+ * - MUST be > TOTAL_VEC_SIZE/512 (i.e., TOTAL_VEC_SIZE/256 or larger). This is because most systems have a hard limit
  * of 1024 open files. If you manually adjust that limit yourself in system preferences, you are able to set this
  * parameter to <= TOTAL_VEC_SIZE/512.
  * - For larger vectors, i.e. length >18, we've found that using more files (up to 256 per vector) is generally a good
@@ -65,9 +70,7 @@ using std::endl;
 /* Print how long each copy to/from external memory took?*/
 #define PRINT_MEM_COPIES false
 
-// TODO: allow NUM_THREADS to be anything
-
-/*######################################################*/
+/*####################### END OF USER PARAMETERS ##############################*/
 
 // equal to pow(2, 2 * length)
 const uint64_t powminus0 = uint64_t(1) << (2 * length);
@@ -82,6 +85,7 @@ const uint64_t powminus3 = uint64_t(1) << ((2 * length) - 3);
 const uint64_t TOTAL_VEC_SIZE = (powminus1 * sizeof(uint32_t));
 #define SINGLE_FILE_ENTRIES (SINGLE_FILE_SIZE / sizeof(uint32_t))
 #define LOOP_CHUNK_SIZE ((powminus0 * sizeof(uint32_t)) / (1 << RECURSE_STOP_DEPTH))
+constexpr int NUM_FILES = std::max((long unsigned int)1, TOTAL_VEC_SIZE / SINGLE_FILE_SIZE);
 
 // Convenience functions
 void printArrayMap(const uint32_t *arr, const int len) {
@@ -92,7 +96,7 @@ void printArrayMap(const uint32_t *arr, const int len) {
     cout << "\n";
 }
 void printFileMap(uint32_t **arr) {
-    for (uint64_t i = 0; i < TOTAL_VEC_SIZE / SINGLE_FILE_SIZE; i++) {
+    for (uint64_t i = 0; i < NUM_FILES; i++) {
         for (uint64_t j = 0; j < SINGLE_FILE_ENTRIES; j++) {
             cout << arr[i][j] << " ";
         }
@@ -130,19 +134,19 @@ int openFile(std::string filepath) {
 /* Create all the files for one vector, and write their file descriptors (fd's) to vecfds*/
 void initVectorFDs(int *vecfds, std::string fileprefix, const bool zeroInit) {
     if (TOTAL_VEC_SIZE < SINGLE_FILE_SIZE) {
-        cout << "NO MMAPING NEEDED PLEASE RECONSIDER, THIS WILL PROBABLY BREAK\n";
+        cout << "Warning: SINGLE_FILE_SIZE > TOTAL_VEC_SIZE. This may break, or it may work.\n";
     }
-    if (TOTAL_VEC_SIZE % SINGLE_FILE_SIZE != 0) {
-        cout << "Error: SINGLE_FILE_SIZE must divide TOTAL_VEC_SIZE!";
+    if (TOTAL_VEC_SIZE % SINGLE_FILE_SIZE != 0 && SINGLE_FILE_SIZE <= TOTAL_VEC_SIZE) {
+        cout << "Error: SINGLE_FILE_SIZE must divide TOTAL_VEC_SIZE!\n";
+        exit(1);
     }
 
-    const int num_maps = TOTAL_VEC_SIZE / SINGLE_FILE_SIZE;
     unsigned char *zeros = 0;
     if (zeroInit) {  // only need to zero initialize v1
         zeros = (unsigned char *)std::calloc(SINGLE_FILE_SIZE, sizeof(char));
     }
 
-    for (int i = 0; i < num_maps; i++) {
+    for (int i = 0; i < NUM_FILES; i++) {
         int fd = openFile((fileprefix + "-" + std::to_string(i) + ".bin").c_str());
         vecfds[i] = fd;
         if (zeroInit) {
@@ -165,11 +169,9 @@ void initVectorFDs(int *vecfds, std::string fileprefix, const bool zeroInit) {
         }
 
         // Print progress (setting up files can take a while for large length)
-        if (num_maps >= 10) {
-            if (i % (num_maps / 10) == 0) {
-                printf("Done making %i of %i files...\n", i, num_maps);
-                std::flush(cout);
-            }
+        if (i % std::max(1, (NUM_FILES / 10)) == 0) {
+            printf("Done making %i of %i files...\n", i, NUM_FILES);
+            std::flush(cout);
         }
     }
     if (zeroInit) {
@@ -610,10 +612,10 @@ void recursive_driver(int *fdsv1, int *fdsv2, uint32_t *readmap, uint32_t *write
 
 void FeasibleTriplet(int n) {
     auto start = std::chrono::system_clock::now();
-    int v1fds[TOTAL_VEC_SIZE / SINGLE_FILE_SIZE];  // contains file descriptors of the files that comprise v1
+    int v1fds[NUM_FILES];  // contains file descriptors of the files that comprise v1
     initVectorFDs(v1fds, "./filev1", true);
     printf("Files for v1 prepared in %f seconds\n", secondsSince(start));
-    int v2fds[TOTAL_VEC_SIZE / SINGLE_FILE_SIZE];  // contains file descriptors of the files that comprise v2
+    int v2fds[NUM_FILES];  // contains file descriptors of the files that comprise v2
     initVectorFDs(v2fds, "./filev2", false);
     printf("Files prepared in %f seconds\n", secondsSince(start));
     std::flush(cout);
@@ -662,8 +664,8 @@ void FeasibleTriplet(int n) {
 
     cout << "Performing cleanup..." << endl;
     if (REMOVE_FILES) {
-        const int num_maps = TOTAL_VEC_SIZE / SINGLE_FILE_SIZE;
-        for (int i = 0; i < num_maps; i++) {
+        ;
+        for (int i = 0; i < NUM_FILES; i++) {
             std::remove(("./filev1-" + std::to_string(i) + ".bin").c_str());
             std::remove(("./filev2-" + std::to_string(i) + ".bin").c_str());
         }
@@ -675,14 +677,14 @@ int main() {
     cout << "Starting with l = " << length << "...\n";
     cout << "Vector size in bytes (entries): " << TOTAL_VEC_SIZE << " (" << (TOTAL_VEC_SIZE / sizeof(uint32_t))
          << ")\n";
-    cout << "Map size in bytes: " << SINGLE_FILE_SIZE << " (" << TOTAL_VEC_SIZE / SINGLE_FILE_SIZE << " maps)\n";
+    cout << "File size in bytes: " << SINGLE_FILE_SIZE << " (" << NUM_FILES << " files per vector)\n";
     cout << "Subdivided chunk size in bytes (entries), STOP_DEPTH: " << LOOP_CHUNK_SIZE << " ("
          << (LOOP_CHUNK_SIZE / sizeof(uint32_t)) << "), " << RECURSE_STOP_DEPTH << "\n";
     cout << "Threads: " << NUM_THREADS << " (+1)\n";
     std::flush(cout);
 
     auto start = std::chrono::system_clock::now();
-    FeasibleTriplet(100);
+    FeasibleTriplet(MAX_ITERS);
     cout << "Elapsed time (s): " << secondsSince(start) << "\n";
     return 0;
 }
