@@ -128,7 +128,6 @@ def main():
         print(2.0 * r / (1 + r))
 
 
-# Python is so annoying sometimes
 # l = 1 to 10, n = 100
 # 0.6666666666666643
 # 0.7272727272727195
