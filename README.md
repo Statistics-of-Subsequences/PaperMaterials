@@ -1,5 +1,5 @@
 ## Implementations of the Kiwi-Soto/Lueker Algorithms
-This repository contains implementations of the algorithms discussed in the paper "Improved Lower Bounds on the Expected Length of Longest Common Subsequences." The algorithms are adapted from papers by Kiwi and Soto as well as Lueker.
+This repository contains implementations of the algorithms discussed in the paper "Improved Lower Bounds on the Expected Length of Longest Common Subsequences" written by George T. Heineman, Chase Miller, Daniel Reichman, Andrew Salls, Gábor Sárközy, and Duncan Soiffer. The algorithms from this paper are adapted from papers by Kiwi and Soto as well as Lueker.
 See the papers here:
 
 (Kiwi and Soto) https://www.cambridge.org/core/journals/combinatorics-probability-and-computing/article/abs/on-a-speculated-relation-between-chvatalsankoff-constants-of-several-sequences/7982322390D3236DC7BC96E42855768A
