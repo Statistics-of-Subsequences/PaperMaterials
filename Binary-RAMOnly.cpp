@@ -112,10 +112,11 @@ uint32_t subtract_and_find_min_parallel(const ArrayXui &v1, const ArrayXui &v2) 
  *
  *
  * A few other notes to understand this code:
+ * - Recall that powm1 = 2^(2*length -1), powm2 = 2^(2*length -2), etc.
  * - 0xAA... is the binary string 10101010..., meaning str & 0xAA... gives us A.
  * - Similarly, 0x55... is the binary string 01010101..., meaning str & 0x55... gives us B.
  * - Doing & (powminus2 - 1) zeros out the first bit of A and of B since (powminus2-1) is 0s until the 2nd
- * - bit of str and 1s after. Similarly, doing & (powminus1 - 1) zeros out only the first bit of A.
+ *     bit of str and 1s after. Similarly, doing & (powminus1 - 1) zeros out only the first bit of A.
  * - The T's stand for Tail. E.g., TB = Tail(B), ATB1 = (A | Tail(B)1), etc.*/
 void L_combined(const uint64_t start, const uint64_t end, const ArrayXui &v, ArrayXui &ret) {
     for (uint64_t str = start; str < end; str++) {
